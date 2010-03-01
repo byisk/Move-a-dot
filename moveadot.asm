@@ -1,4 +1,4 @@
-; move a dot with the joystick by Kirk Israel
+; move a dot with the joystick by Szymon "b.YISK" Barczak based on Kirk Israel's code
 
 	processor 6502
 	include vcs.h
@@ -7,15 +7,17 @@
 
 YPosFromBot = $80;
 VisibleMissileLine = $81;
+WidVal = $82;
+WidCnt = $83;
 
 ;generic start up stuff...
 Start
 	CLEAN_START
 
 
-	lda #$00
+	lda #$70
 	sta COLUBK	;start with black background
-	lda #66
+	lda #10
 	sta COLUP0
 ;Setting some variables...
 	lda #80
@@ -23,7 +25,10 @@ Start
 
 	lda #$20
 	sta NUSIZ0	;Quad Width
-
+	lda #5
+	sta WidCnt
+	lda #1
+	sta WidVal
 
 ;VSYNC time
 MainLoop
@@ -55,11 +60,15 @@ MainLoop
 	bit SWCHA
 	bne SkipMoveDown
 	inc YPosFromBot
+	inc YPosFromBot
+	inc YPosFromBot
 SkipMoveDown
 
 	lda #%00100000	;Up?
 	bit SWCHA
 	bne SkipMoveUp
+	dec YPosFromBot
+	dec YPosFromBot
 	dec YPosFromBot
 SkipMoveUp
 
@@ -103,6 +112,22 @@ SkipMoveRight
 	bmi ButtonNotPressed	;skip if button not pressed
 	lda YPosFromBot		;must be pressed, get YPos
 	sta COLUBK		;load into bgcolor
+	dec WidCnt
+	bne ButtonNotPressed
+changes	lda WidVal
+	cmp #1
+	beq changeto30
+changeto20	lda #1
+	sta WidVal
+	lda #$20
+	sta NUSIZ0
+	jmp reset
+changeto30	lda #2
+	sta WidVal
+	lda #$30
+	sta NUSIZ0
+reset	lda #25
+	sta WidCnt
 ButtonNotPressed
 
 
@@ -110,7 +135,7 @@ ButtonNotPressed
 WaitForVblankEnd
 	lda INTIM
 	bne WaitForVblankEnd
-	ldy #191
+	ldy #227
 	sta WSYNC
 	sta VBLANK
 
@@ -133,7 +158,7 @@ ScanLoop
 CheckActivateMissile
 	cpy YPosFromBot
 	bne SkipActivateMissile
-	lda #8
+	lda #18
 	sta VisibleMissileLine
 SkipActivateMissile
 
