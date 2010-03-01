@@ -10,19 +10,15 @@ VisibleMissileLine = $81;
 WidVal = $82;
 WidCnt = $83;
 
-;generic start up stuff...
 Start
 	CLEAN_START
 
-
 	lda #$70
-	sta COLUBK	;start with black background
+	sta COLUBK
 	lda #10
 	sta COLUP0
-;Setting some variables...
 	lda #80
 	sta YPosFromBot	;Initial Y Position
-
 	lda #$20
 	sta NUSIZ0	;Quad Width
 	lda #5
@@ -43,18 +39,7 @@ MainLoop
 	sta VSYNC
 
 
-;Main Computations; check down, up, left, right
-;general idea is to do a BIT compare to see if
-;a certain direction is pressed, and skip the value
-;change if we're not moving that way
-
-;
-;Not the most efficient code, but gets the job done,
-;including diagonal movement
-;
-
-; for up and down, we INC or DEC
-; the Y Position
+;Checking vertical position changes
 
 	lda #%00010000	;Down?
 	bit SWCHA
@@ -72,26 +57,19 @@ SkipMoveDown
 	dec YPosFromBot
 SkipMoveUp
 
-; for left and right, we're gonna
-; set the horizontal speed, and then do
-; a single HMOVE.  We'll use X to hold the
-; horizontal speed, then store it in the
-; appropriate register
-
-
 ;assum horiz speed will be zero
 	ldx #0
 
 	lda #%01000000	;Left?
 	bit SWCHA
 	bne SkipMoveLeft
-	ldx #$10	;a 1 in the left nibble means go left
+	ldx #$10		;a 1 in the left nibble means go left
 SkipMoveLeft
 
 	lda #%10000000	;Right?
 	bit SWCHA
 	bne SkipMoveRight
-	ldx #$F0	;a -1 in the left nibble means go right...
+	ldx #$F0		;a -1 in the left nibble means go right...
 SkipMoveRight
 			;(in 4 bits, using "two's complement
 			; notation", binary 1111 = decimal -1
@@ -102,11 +80,7 @@ SkipMoveRight
 	stx HMM0	;set the move for missile 0
 
 
-; while we're at it, change the color of the background
-; if the button is pressed (making sure D6 of VBLANK has
-; appropriately set above) We'll set the background color
-; to the vertical position, since that will be changing
-; a lot but we can still control it.
+;Other stuff
 
 	lda INPT4		;read button input
 	bmi ButtonNotPressed	;skip if button not pressed
@@ -135,25 +109,17 @@ ButtonNotPressed
 WaitForVblankEnd
 	lda INTIM
 	bne WaitForVblankEnd
-	ldy #227
+	ldy #227		; changed from 192 to make it PAL
 	sta WSYNC
 	sta VBLANK
 
 	sta WSYNC
 	sta HMOVE
 
-;main scanline loop...
-;
-;(this probably ends the "new code" section of today's
-; lesson...)
-
+;Main scanline loop
 
 ScanLoop
 	sta WSYNC
-
-; here the idea is that VisibleMissileLine
-; is zero if the line isn't being drawn now,
-; otherwise it's however many lines we have to go
 
 CheckActivateMissile
 	cpy YPosFromBot
@@ -171,20 +137,20 @@ SkipActivateMissile
 ;
 	lda VisibleMissileLine
 	beq FinishMissile
+
 IsMissileOn
 	lda #2
 	sta ENAM0
 	dec VisibleMissileLine
+
 FinishMissile
-
-
 	dey
 	bne ScanLoop
-
 	lda #2
 	sta WSYNC
 	sta VBLANK
 	ldx #30
+
 OverScanWait
 	sta WSYNC
 	dex
