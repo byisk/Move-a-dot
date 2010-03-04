@@ -7,26 +7,25 @@
 
 YPosFromBot = $80;
 VisibleMissileLine = $81;
-Lock = $82;
-Lockcounter = $83;
-Figurelock = $84;
+Figurelock = $82;
+COLUBK2 = $83;
+COLUP02	= $84;
 
 Start
 	CLEAN_START
 
 	lda #$70
 	sta COLUBK
+	sta COLUBK2
 	lda #10
 	sta COLUP0
-	lda #80
+	sta COLUP02
+	lda #50
 	sta YPosFromBot	;Initial Y Position
-	lda #$20
+	lda #$30
 	sta NUSIZ0	;Quad Width
 	lda #2
-	sta Lock
 	sta Figurelock
-	lda #6
-	sta Lockcounter	
 
 ;VSYNC time
 MainLoop
@@ -40,17 +39,17 @@ MainLoop
 	lda #0
 	sta VSYNC
 
-TestLock
-	lda Lock
-	cmp #1
-	bne TestFigurelock
-	jsr WaitForVblankEnd 
-	dec Lockcounter
-	bne MainLoop
-	lda #6
-	sta Lockcounter
-	inc Lock
-	jmp MainLoop
+;TestLock
+;	lda Lock
+;	cmp #1
+;	bne TestFigurelock
+;	jsr WaitForVblankEnd 
+;	dec Lockcounter
+;	bne MainLoop
+;	lda #6
+;	sta Lockcounter
+;	inc Lock
+;	jmp MainLoop
 
 TestFigurelock
 	lda Figurelock
@@ -63,35 +62,62 @@ ChangePosition
 	stx HMM0
 	jsr TestLeft
 	bne NoLeft
-	ldx #$30
+	ldx #$10
 	stx HMM0
-	jmp EnableLock
+	jmp WaitForVblankEnd 
 NoLeft	jsr TestRight
 	bne NoRight
-	ldx #$D0
+	ldx #$F0
 	stx HMM0 
-	jmp EnableLock
+	jmp WaitForVblankEnd 
 NoRight	jsr TestDown
 	bne NoDown
 	inc YPosFromBot
 	inc YPosFromBot
-	jmp EnableLock
+	jmp WaitForVblankEnd 
 NoDown	jsr TestUp
 	bne NoUp
 	dec YPosFromBot
 	dec YPosFromBot
-	jmp EnableLock
+	jmp WaitForVblankEnd 
 NoUp	lda INPT4	
-	beq InptEnabled
-	jmp EnableLock
-	
-InptEnabled
+	bmi Jump
 	dec Figurelock
-	jmp EnableLock
+	
+Jump
+	jmp WaitForVblankEnd
 
 
 ChangeColor
-
+	jsr TestLeft
+	bne NoLeft2
+	dec COLUP02
+	lda COLUP02
+	sta COLUP0
+	jmp WaitForVblankEnd 
+NoLeft2	jsr TestRight
+	bne NoRght2
+	inc COLUP02
+	lda COLUP02
+	sta COLUP0
+	jmp WaitForVblankEnd 
+NoRght2 jsr TestDown
+	bne NoDown2
+	dec COLUBK2
+	lda COLUBK2
+	sta COLUBK
+	jmp WaitForVblankEnd 
+NoDown2	jsr TestUp
+	bne NoUp2
+	inc COLUBK2
+	lda COLUBK2
+	sta COLUBK
+	jmp WaitForVblankEnd 
+NoUp2	lda INPT4
+	bmi Jump2
+	inc Figurelock
+Jump2
+	jmp WaitForVblankEnd 
 
 TestLeft
 	lda #%01000000
@@ -113,9 +139,9 @@ TestUp
 	bit SWCHA
 	rts
 
-EnableLock
-	dec Lock
-	jmp TestLock
+;EnableLock
+;	dec Figurelock
+;	jmp TestLock
 
 ;Other stuff
 
@@ -186,12 +212,12 @@ FinishMissile
 	lda #2
 	sta WSYNC
 	sta VBLANK
-
+	ldx #30
 OverScanWait
 	sta WSYNC
 	dex
 	bne OverScanWait
-	rts
+	jmp MainLoop
 
 	org $FFFC
 	.word Start
