@@ -5,16 +5,25 @@
 	include macro.h
 	org $F000
 
+; If a value in any of non-default registers is set to a "2", it means that a function is disabled
+; if it is a "1", a function is enabled.
+ 
 YPosFromBot = $80;
 VisibleMissileLine = $81;
-Figurelock = $82;
-COLUBK2 = $83;
-COLUP02	= $84;
-Lock = $85;
-Lockcounter = $86;
-SmallSquareSwitch = $87;
-SquareHeight = $88;
-COLUBKBACKUPED = $89;
+SquareHeight = $82;
+Figurelock = $83;
+; Figurelock is used to check if a lock for figure is enabled. If that situation happens, a player can't move a figure
+COLUBK2 = $84;
+COLUP02	= $85;
+; COLUP02 and COLUBK2 are used because to decrease and increase COLUP0 and COLUBK values, which cannot be made in normal way,
+; because registers are cleared every time a frame is drawn on the screen.
+Lock = $86;
+Lockcounter = $87;
+; These variables below were used to Easter Egg
+; SmallSquareSwitch = $87;
+; COLUBKBACKUPED = $89;
+CounterLeft = $88;
+CounterRight = $89;
 
 Start
 	CLEAN_START
@@ -22,7 +31,7 @@ Start
 	lda #$70
 	sta COLUBK
 	sta COLUBK2
-	sta COLUBKBACKUPED
+;	sta COLUBKBACKUPED
 	lda #10
 	sta COLUP0
 	sta COLUP02
@@ -34,9 +43,13 @@ Start
 	sta Figurelock
 	sta Lock
 	sta Lockcounter
-	sta SmallSquareSwitch
-	lda #18
+;	sta SmallSquareSwitch
+	lda #15
 	sta SquareHeight
+	lda #0
+	sta CounterLeft
+	sta CounterRight
+	lda #13
 
 MainLoop
 	lda #2
@@ -48,6 +61,12 @@ MainLoop
 	sta TIM64T
 	lda #0
 	sta VSYNC
+	lda #0
+	sta AUDC0
+	sta AUDF0
+	sta AUDV0
+
+
 
 TestLock
 	ldx #0
@@ -69,24 +88,35 @@ TestFigurelock
 	bne ChangePosition
 	jmp ChangeColor
 
+; Keeping real the idea of KISS, I moved all the tests to subroutines, because both ChangePosition and ChangeColor
+; functions check for a player's interaction.  
+
 ChangePosition
 	jsr TestLeft
 	bne NoLeft
-	ldx #$20
-	stx HMM0
-	jmp EnableLockForPositionChanges 
+	inc CounterLeft
+	lda #12
+	sta AUDC0
+	sta AUDF0
+	sta AUDV0
+;	jmp EnableLockForPositionChanges 
 NoLeft	jsr TestRight
 	bne NoRight
-	ldx #$E0
-	stx HMM0 
-	jmp EnableLockForPositionChanges
+	inc CounterRight 
+	lda #10
+	sta AUDC0
+	sta AUDF0
+	sta AUDV0
+;	jmp EnableLockForPositionChanges
 NoRight	jsr TestDown
 	bne NoDown
+	jsr MoveLeft
 	inc YPosFromBot
 	inc YPosFromBot
 	jmp EnableLockForPositionChanges
 NoDown	jsr TestUp
 	bne NoUp
+	jsr MoveLeft
 	dec YPosFromBot
 	dec YPosFromBot
 	jmp EnableLockForPositionChanges
@@ -103,6 +133,34 @@ Jump
 	jmp WaitForVblankEnd
 
 ChangeColor
+
+MoveLeft
+	ldy CounterLeft
+	beq MoveRight
+
+MoveLeftLoop
+	ldx #$20
+	stx HMM0
+	dec CounterLeft
+	jmp WaitForVblankEnd
+	lda #0
+	sta CounterLeft
+
+MoveRight
+	ldy CounterRight
+	beq NoHorizontalMoves
+
+MoveRightLoop
+	ldx #$E0
+	stx HMM0
+	dec CounterRight
+	jmp WaitForVblankEnd
+	lda #0
+	sta CounterRight
+
+NoHorizontalMoves
+	lda #1
+	sta Figurelock
 	jsr TestLeft
 	bne NoLeft2
 	dec COLUP02
@@ -130,7 +188,10 @@ NoDown2	jsr TestUp
 NoUp2	lda INPT4
 	bmi Jump2
 	inc Figurelock
-	jsr TestColorSimilarity	
+
+;	This jump to subroutine is made to run an Easter Egg. Bitch ain't work.
+;	jsr TestColorSimilarity	
+
 	jmp EnableLockForPositionChanges
 
 Jump2
@@ -162,35 +223,37 @@ TestUp
 	bit SWCHA
 	rts
 
-TestColorSimilarity
-	lda COLUBKBACKUPED
-	cmp COLUP0
-	bne TestColorSimilarityEnd
-	lda SmallSquareSwitch
-	cmp #1
-	bne MakeItBigger
+; That shit below is kinda Easter Egg, but it doesn't work
 
-MakeItSmaller
-	lda #20
-	sta NUSIZ0
-	lda #10
-	sta SquareHeight
-	dec SmallSquareSwitch
-	jmp TestColorSimilarityEnd
-
-MakeItBigger
-	lda #30
-	sta NUSIZ0
-	lda #18
-	sta SquareHeight
-	inc SmallSquareSwitch
-
-TestColorSimilarityEnd
-	rts
+;TestColorSimilarity			
+;	lda COLUBKBACKUPED
+;	cmp COLUP0
+;	bne TestColorSimilarityEnd
+;	lda SmallSquareSwitch
+;	cmp #1
+;	bne MakeItBigger
+;
+;MakeItSmaller
+;	lda #20
+;	sta NUSIZ0
+;	lda #10
+;	sta SquareHeight
+;	dec SmallSquareSwitch
+;	jmp TestColorSimilarityEnd
+;
+;MakeItBigger
+;	lda #30
+;	sta NUSIZ0
+;	lda #18
+;	sta SquareHeight
+;	inc SmallSquareSwitch
+;
+;TestColorSimilarityEnd
+;	rts
 
 WaitForVblankEnd
 	lda COLUBK2
-	sta COLUBKBACKUPED
+;	sta COLUBKBACKUPED
 	lda INTIM
 	bne WaitForVblankEnd
 	ldy #227		; changed from 192 to make it PAL
@@ -206,8 +269,8 @@ ScanLoop
 CheckActivateMissile
 	cpy YPosFromBot
 	bne SkipActivateMissile
-	lda SquareHeight
-	sta VisibleMissileLine
+	lda SquareHeight		; Here the square width is taken and given to VisibleMissleLine register to drawn
+	sta VisibleMissileLine		; the same number of lines, so it will be a square
 SkipActivateMissile
 
 ;turn missile off then see if it's turned on
