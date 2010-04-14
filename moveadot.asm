@@ -110,13 +110,11 @@ NoLeft	jsr TestRight
 ;	jmp EnableLockForPositionChanges
 NoRight	jsr TestDown
 	bne NoDown
-	jsr MoveLeft
 	inc YPosFromBot
 	inc YPosFromBot
 	jmp EnableLockForPositionChanges
 NoDown	jsr TestUp
 	bne NoUp
-	jsr MoveLeft
 	dec YPosFromBot
 	dec YPosFromBot
 	jmp EnableLockForPositionChanges
